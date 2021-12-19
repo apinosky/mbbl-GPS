@@ -1,12 +1,13 @@
 """ This file defines the iLQG-based trajectory optimization method. """
-import logging
+# import logging
 
 import numpy as np
 
 from gps.algorithm.algorithm import Algorithm
+from mbbl.util.common import logger as LOGGER
 
 
-LOGGER = logging.getLogger(__name__)
+# LOGGER = logging.getLogger(__name__)
 
 
 class AlgorithmTrajOpt(Algorithm):

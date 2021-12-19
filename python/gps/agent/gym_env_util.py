@@ -2,7 +2,7 @@
 import numpy as np
 
 
-def get_x0(env_name):
+def get_x0(env_name,rand_seed):
     if env_name in ['gym_walker2d', 'gym_hopper', 'gym_swimmer',
                     'gym_cheetah', 'gym_ant']:
         from mbbl.env.gym_env.walker import env
@@ -40,7 +40,7 @@ def get_x0(env_name):
     else:
         raise NotImplementedError
 
-    gym_env = env(env_name, 1234, misc_info={})
+    gym_env = env(env_name, rand_seed, misc_info={})
 
     # get the x0
     if env_name in ['gym_cheetah', 'gym_walker2d', 'gym_hopper',

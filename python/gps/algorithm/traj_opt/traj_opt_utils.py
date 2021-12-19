@@ -1,12 +1,13 @@
 """ This file defines utilities for trajectory optimization. """
 import abc
-import logging
+# import logging
 
 import numpy as np
 import scipy as sp
 
 
-LOGGER = logging.getLogger(__name__)
+# LOGGER = logging.getLogger(__name__)
+from mbbl.util.common import logger as LOGGER
 
 # Constants used in TrajOptLQR.
 DGD_MAX_ITER = 50

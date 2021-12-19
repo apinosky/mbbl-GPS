@@ -5,7 +5,7 @@ The Image Visualizer class expects to be given images in real time (via the
 update function), and displays those images onto the screen. Optionally,
 images can be supplied via a rostopic.
 
-The Image Visualizer can also overlay an initial image or target image on top 
+The Image Visualizer can also overlay an initial image or target image on top
 of the realtime images. This is used for resetting the task space after each
 sample if the robot disturbed it during sampling.
 """
@@ -36,8 +36,8 @@ class ImageVisualizer(object):
 
     def __init__(self, fig, gs, cropsize=None, rostopic=None, show_overlay_buttons=False):
         """
-        If rostopic is given to this constructor, then the image visualizer will 
-        automatically update with rostopic image. Else, the update method must 
+        If rostopic is given to this constructor, then the image visualizer will
+        automatically update with rostopic image. Else, the update method must
         be manually called to supply images.
         """
         # Real-time image

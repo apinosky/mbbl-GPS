@@ -1,10 +1,10 @@
 """ Default configuration and hyperparameters for agent objects. """
-import logging
+# import logging
 
 import numpy as np
+from mbbl.util.common import logger as LOGGER
 
-
-LOGGER = logging.getLogger(__name__)
+# LOGGER = logging.getLogger(__name__)
 
 
 # Agent

@@ -24,6 +24,8 @@ from mbbl.env.gym_env import fixed_swimmer
 from mbbl.env.gym_env import fixed_walker
 from mbbl.env.gym_env import humanoid
 
+import pickle
+from mbbl.util.common import logger as LOGGER
 
 class AgentMuJoCo(Agent):
     """
@@ -31,13 +33,19 @@ class AgentMuJoCo(Agent):
     this class.
     """
 
-    def __init__(self, hyperparams):
+    def __init__(self, hyperparams,random_seed):
         config = copy.deepcopy(AGENT_MUJOCO)
         config.update(hyperparams)
         Agent.__init__(self, config)
 
         self._setup_conditions()
-        self._setup_world(hyperparams['env_name'])
+        self._setup_world(hyperparams['env_name'],random_seed)
+        self.rewards = []
+        self.eval_rewards = []
+        self.total_step = 0
+        self.ep_num = -1
+        self.sum_reward = 0
+        self.sum_step = 0
 
     def _setup_conditions(self):
         """
@@ -46,7 +54,7 @@ class AgentMuJoCo(Agent):
         """
         pass
 
-    def _setup_world(self, env_name):
+    def _setup_world(self, env_name,random_seed):
         """
         Helper method for handling setup of the MuJoCo world.
         Args:
@@ -54,51 +62,51 @@ class AgentMuJoCo(Agent):
         """
         if env_name in ['gym_reacher']:
             self._env = \
-                reacher.env(env_name, 1234, misc_info={'reset_type': 'gym'})
+                reacher.env(env_name, random_seed, misc_info={'reset_type': 'gym'})
         elif env_name in ['gym_cheetah', 'gym_walker2d',
                           'gym_hopper', 'gym_swimmer', 'gym_ant']:
             self._env = \
-                walker.env(env_name, 1234, misc_info={'reset_type': 'gym'})
+                walker.env(env_name, random_seed, misc_info={'reset_type': 'gym'})
         elif env_name in ['gym_nostopslimhumanoid']:
             self._env = \
-                humanoid.env(env_name, 1234, misc_info={'reset_type': 'gym'})
+                humanoid.env(env_name, random_seed, misc_info={'reset_type': 'gym'})
 
         elif env_name in ['gym_pendulum']:
             self._env = \
-                pendulum.env(env_name, 1234, misc_info={'reset_type': 'gym'})
+                pendulum.env(env_name, random_seed, misc_info={'reset_type': 'gym'})
         elif env_name in ['gym_invertedPendulum']:
-            self._env = invertedPendulum.env(env_name, 1234,
+            self._env = invertedPendulum.env(env_name, random_seed,
                                              misc_info={'reset_type': 'gym'})
         elif env_name in ['gym_acrobot']:
             self._env = \
-                acrobot.env(env_name, 1234, misc_info={'reset_type': 'gym'})
+                acrobot.env(env_name, random_seed, misc_info={'reset_type': 'gym'})
         elif env_name in ['gym_mountain']:
-            self._env = mountain_car.env(env_name, 1234,
+            self._env = mountain_car.env(env_name, random_seed,
                                          misc_info={'reset_type': 'gym'})
         elif env_name in ['gym_cartpole']:
             self._env = \
-                cartpole.env(env_name, 1234, misc_info={'reset_type': 'gym'})
+                cartpole.env(env_name, random_seed, misc_info={'reset_type': 'gym'})
         elif env_name in ['gym_petsCheetah', 'gym_petsReacher', 'gym_petsPusher']:
             self._env = \
-                pets.env(env_name, 1234, misc_info={'reset_type': 'gym'})
+                pets.env(env_name, random_seed, misc_info={'reset_type': 'gym'})
         elif env_name in ['gym_cheetahO01', 'gym_cheetahO001',
                           'gym_cheetahA01', 'gym_cheetahA003']:
-            self._env = noise_gym_cheetah.env(env_name, 1234,
+            self._env = noise_gym_cheetah.env(env_name, random_seed,
                                               misc_info={'reset_type': 'gym'})
         elif env_name in ['gym_pendulumO01', 'gym_pendulumO001']:
-            self._env = noise_gym_pendulum.env(env_name, 1234,
+            self._env = noise_gym_pendulum.env(env_name, random_seed,
                                                misc_info={'reset_type': 'gym'})
         elif env_name in ['gym_cartpoleO01', 'gym_cartpoleO001']:
-            self._env = noise_gym_cartpole.env(env_name, 1234,
+            self._env = noise_gym_cartpole.env(env_name, random_seed,
                                                misc_info={'reset_type': 'gym'})
         elif env_name in ['gym_fwalker2d', 'gym_fant', 'gym_fhopper']:
             self._env = fixed_walker.env(
-                env_name, 1234,
+                env_name, random_seed,
                 misc_info={'reset_type': 'gym', 'no_termination': True}
             )
         elif env_name in ['gym_fswimmer']:
             self._env = fixed_swimmer.env(
-                env_name, 1234,
+                env_name, random_seed,
                 misc_info={'reset_type': 'gym', 'no_termination': True}
             )
         else:
@@ -107,7 +115,7 @@ class AgentMuJoCo(Agent):
         self.x0 = [np.array(self._hyperparams['x0'])
                    for _ in range(self._hyperparams['conditions'])]
 
-    def sample(self, policy, condition, verbose=True, save=True, noisy=True):
+    def sample(self, policy, condition, verbose=True, save=True, noisy=True, render=False, reset=True):
         """
         Runs a trial and constructs a new sample containing information
         about the trial.
@@ -119,6 +127,10 @@ class AgentMuJoCo(Agent):
             noisy: Whether or not to use noise during sampling.
         """
         assert condition < self._hyperparams['conditions']
+        if reset:
+            self.sum_reward = 0.
+            self.sum_step = 0
+            self.ep_num += 1.
 
         # Create new sample, populate first time step (reset the env)
         new_sample = self._init_sample(condition, feature_fn=None)
@@ -134,17 +146,38 @@ class AgentMuJoCo(Agent):
             obs_t = new_sample.get_obs(t=t)
             mj_U = policy.act(X_t, obs_t, t, noise[t, :])
             U[t, :] = mj_U
+            new_ob, reward, done, _ = \
+                self._env.step(np.array(mj_U).flatten())
             if (t + 1) < self.T:
-                new_ob, reward, done, _ = \
-                    self._env.step(np.array(mj_U).flatten())
                 new_sample.set('observation', new_ob, t=t + 1)
+            if render:
+                self._env._env.render()
+            self.sum_reward += reward
+            self.sum_step += 1
+            if save:
+                self.total_step += 1
+            if done:
+                break
+
+        if done:
+            if save:
+                self.rewards.append([self.total_step,self.sum_reward,self.ep_num])
+                LOGGER.info('ep rew %d %f %d %d', self.ep_num, self.sum_reward, self.total_step, t)
+            else:
+                self.eval_rewards.append([self.total_step,self.sum_reward,self.ep_num])
+                LOGGER.info('eval: ep rew %d %f %d %d', self.ep_num, self.sum_reward, self.total_step, t)
+
         new_sample.set('action', U)
         new_sample.set(NOISE, noise)
         if save:
             self._samples[condition].append(new_sample)
         return new_sample
 
-    def _init(self, condition):
+    def save_rew(self,filepath):
+        pickle.dump(self.rewards,open(filepath+'reward_data.pkl','wb'))
+        pickle.dump(self.eval_rewards,open(filepath+'eval_reward_data.pkl','wb'))
+
+    def _init(self, condition): ##<< check if this is used anywhere....
         """
         Set the world to a given model, and run kinematics.
         Args:

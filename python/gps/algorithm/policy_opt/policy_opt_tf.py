@@ -1,6 +1,6 @@
 """ This file defines policy optimization for a tensorflow policy. """
 import copy
-import logging
+# import logging
 import os
 import tempfile
 
@@ -17,8 +17,8 @@ from gps.algorithm.policy_opt.policy_opt import PolicyOpt
 from gps.algorithm.policy_opt.tf_utils import TfSolver
 
 
-LOGGER = logging.getLogger(__name__)
-
+# LOGGER = logging.getLogger(__name__)
+from mbbl.util.common import logger as LOGGER
 
 class PolicyOptTf(PolicyOpt):
     """ Policy optimization using tensor flow for DAG computations/nonlinear function approximation. """
@@ -147,7 +147,7 @@ class PolicyOptTf(PolicyOpt):
 
         # Assuming that N*T >= self.batch_size.
         batches_per_epoch = np.floor(N*T / self.batch_size)
-        idx = range(N*T)
+        idx = list(range(N*T))
         average_loss = 0
         np.random.shuffle(idx)
 
@@ -282,4 +282,3 @@ class PolicyOptTf(PolicyOpt):
             f.write(state['wts'])
             f.seek(0)
             self.restore_model(f.name)
-

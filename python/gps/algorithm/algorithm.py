@@ -2,7 +2,7 @@
 
 import abc
 import copy
-import logging
+# import logging
 
 import random
 import numpy as np
@@ -12,14 +12,15 @@ from gps.algorithm.algorithm_utils import IterationData, TrajectoryInfo
 from gps.utility.general_utils import extract_condition
 
 
-LOGGER = logging.getLogger(__name__)
+# LOGGER = logging.getLogger(__name__)
+from mbbl.util.common import logger as LOGGER
 
 
 class Algorithm(object):
     """ Algorithm superclass. """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, hyperparams):
+    def __init__(self, hyperparams,random_seed):
         config = copy.deepcopy(ALG)
         config.update(hyperparams)
         self._hyperparams = config
@@ -69,12 +70,12 @@ class Algorithm(object):
         )
         if type(hyperparams['cost']) == list:
             self.cost = [
-                hyperparams['cost'][i]['type'](hyperparams['cost'][i])
+                hyperparams['cost'][i]['type'](hyperparams['cost'][i],random_seed)
                 for i in range(self.M)
             ]
         else:
             self.cost = [
-                hyperparams['cost']['type'](hyperparams['cost'])
+                hyperparams['cost']['type'](hyperparams['cost'],random_seed)
                 for _ in range(self.M)
             ]
         self.base_kl_step = self._hyperparams['kl_step']
@@ -176,8 +177,8 @@ class Algorithm(object):
         self.cur[cond].cs = cs  # True value of cost.
         average_episode_reward = -np.sum(np.mean(cs, axis=0))
 
-        LOGGER.debug('Curret timesteps {}'.format(self.current_timesteps))
-        LOGGER.debug('Curret reward {}'.format(average_episode_reward))
+        LOGGER.debug('Current # updates {}'.format(self.current_timesteps))
+        LOGGER.debug('Current avg ep reward {}'.format(average_episode_reward))
 
     def _advance_iteration_variables(self):
         """

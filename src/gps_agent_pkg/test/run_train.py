@@ -5,7 +5,10 @@ import scipy
 import scipy.io
 import logging
 import argparse
-import cPickle
+try:
+   import cPickle
+except:
+   import pickle as cPickle
 from gps.hyperparam_pr2 import defaults
 from gps.sample.sample import Sample
 from gps.algorithm.dynamics.dynamics_prior_gmm import DynamicsPriorGMM

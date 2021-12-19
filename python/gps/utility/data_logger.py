@@ -1,12 +1,13 @@
 """ This file defines the data logger. """
-import logging
+# import logging
 try:
    import cPickle as pickle
 except:
    import pickle
 
 
-LOGGER = logging.getLogger(__name__)
+# LOGGER = logging.getLogger(__name__)
+from mbbl.util.common import logger as LOGGER
 
 
 class DataLogger(object):
@@ -23,7 +24,8 @@ class DataLogger(object):
 
     def pickle(self, filename, data):
         """ Pickle data into file specified by filename. """
-        return
+        pickle.dump(data, open(filename, 'wb'))
+        LOGGER.debug('saved data to: %s', filename)
 
     def unpickle(self, filename):
         """ Unpickle data from file specified by filename. """

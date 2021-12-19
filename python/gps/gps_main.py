@@ -4,7 +4,7 @@ import matplotlib as mpl
 # mpl.use('Qt4Agg')
 mpl.use('Agg')
 
-import logging
+# import logging
 import imp
 import os
 import os.path
@@ -20,7 +20,13 @@ sys.path.append('/'.join(str.split(__file__, '/')[:-2]))
 from gps.gui.gps_training_gui import GPSTrainingGUI
 from gps.utility.data_logger import DataLogger
 from gps.sample.sample_list import SampleList
+from mbbl.util.common import logger as LOGGER
 
+use_buffer = True
+num_buff_samples = 2
+
+if use_buffer:
+    from gps.sample.replay_buffer import ReplayBuffer
 
 class GPSMain(object):
     """ Main class to run algorithms and experiments. """
@@ -45,12 +51,15 @@ class GPSMain(object):
 
         self._data_files_dir = config['common']['data_files_dir']
 
-        self.agent = config['agent']['type'](config['agent'])
+        self.agent = config['agent']['type'](config['agent'],config['random_seed'])
         self.data_logger = DataLogger()
         self.gui = GPSTrainingGUI(config['common']) if config['gui_on'] else None
 
         config['algorithm']['agent'] = self.agent
-        self.algorithm = config['algorithm']['type'](config['algorithm'])
+        self.algorithm = config['algorithm']['type'](config['algorithm'],config['random_seed'])
+
+        if use_buffer:
+            self.replay_buffer = [ReplayBuffer(int(1e5)) for _ in self._train_idx]
 
     def run(self, itr_load=None):
         """
@@ -63,15 +72,37 @@ class GPSMain(object):
         try:
             itr_start = self._initialize(itr_load)
 
-            for itr in range(itr_start, self._hyperparams['iterations']):
+            # for itr in range(itr_start, self._hyperparams['iterations']):
+            itr = 0
+            while self.agent.total_step < self._hyperparams['total_timestep']:
                 for cond in self._train_idx:
                     for i in range(self._hyperparams['num_samples']):
                         self._take_sample(itr, cond, i)
 
-                traj_sample_lists = [
-                    self.agent.get_samples(cond, -self._hyperparams['num_samples'])
-                    for cond in self._train_idx
-                ]
+                    if use_buffer:
+                        # pull from replay buffer
+                        got_samples = False
+                        if len(self.replay_buffer[cond]) > self._hyperparams['num_samples']:
+                            old_traj_samples = self.replay_buffer[cond].sample(num_buff_samples)
+                            got_samples = True
+                            LOGGER.warn('pulled samples from replay buffer')
+                        # push to replay buffer
+                        self.replay_buffer[cond].push(self.agent.get_samples(cond, -self._hyperparams['num_samples']))
+                        # add to agent
+                        if got_samples:
+                            for new_sample in old_traj_samples:
+                                self.agent._samples[cond].append(new_sample)
+
+                if use_buffer:
+                    traj_sample_lists = [
+                        self.agent.get_samples(cond, -(self._hyperparams['num_samples']+num_buff_samples) if got_samples else -self._hyperparams['num_samples'])
+                        for cond in self._train_idx
+                    ]
+                else:
+                    traj_sample_lists = [
+                        self.agent.get_samples(cond, -self._hyperparams['num_samples'])
+                        for cond in self._train_idx
+                    ]
 
                 # Clear agent samples.
                 self.agent.clear_samples()
@@ -79,6 +110,12 @@ class GPSMain(object):
                 self._take_iteration(itr, traj_sample_lists)
                 pol_sample_lists = self._take_policy_samples()
                 self._log_data(itr, traj_sample_lists, pol_sample_lists)
+                itr += 1
+                if use_buffer:
+                    LOGGER.warn('len traj_sample_lists %d, timesteps %d',
+                        len(traj_sample_lists[0]),self.agent.total_step)
+            self._log_data(itr, traj_sample_lists, pol_sample_lists,final=True)
+            LOGGER.warn('gps run() complete')
         except Exception as e:
             traceback.print_exception(*sys.exc_info())
         finally:
@@ -238,7 +275,7 @@ class GPSMain(object):
                 verbose=verbose, save=False, noisy=False)
         return [SampleList(samples) for samples in pol_samples]
 
-    def _log_data(self, itr, traj_sample_lists, pol_sample_lists=None):
+    def _log_data(self, itr, traj_sample_lists, pol_sample_lists=None, final=False):
         """
         Log data and algorithm, and update the GUI.
         Args:
@@ -256,19 +293,26 @@ class GPSMain(object):
             )
         if 'no_sample_logging' in self._hyperparams['common']:
             return
-        self.data_logger.pickle(
-            self._data_files_dir + ('algorithm_itr_%02d.pkl' % itr),
-            copy.copy(self.algorithm)
+        self.agent.save_rew(
+            self._data_files_dir + '../'
         )
-        self.data_logger.pickle(
-            self._data_files_dir + ('traj_sample_itr_%02d.pkl' % itr),
-            copy.copy(traj_sample_lists)
-        )
-        if pol_sample_lists:
+        if final:
+            temp_alg = copy.copy(self.algorithm)
+            del temp_alg.cost # don't want to pickle this
             self.data_logger.pickle(
-                self._data_files_dir + ('pol_sample_itr_%02d.pkl' % itr),
-                copy.copy(pol_sample_lists)
+                self._data_files_dir + 'algorithm_final.pkl',
+                temp_alg
+                # copy.copy(self.algorithm)
             )
+        # self.data_logger.pickle(
+        #     self._data_files_dir + ('traj_sample_itr_%02d.pkl' % itr),
+        #     copy.copy(traj_sample_lists)
+        # )
+        # if pol_sample_lists:
+        #     self.data_logger.pickle(
+        #         self._data_files_dir + ('pol_sample_itr_%02d.pkl' % itr),
+        #         copy.copy(pol_sample_lists)
+        #     )
 
     def _end(self):
         """ Finish running and exit. """
@@ -308,10 +352,10 @@ def main():
     exp_dir = gps_dir + 'experiments/' + exp_name + '/'
     hyperparams_file = exp_dir + 'hyperparams.py'
 
-    if args.silent:
-        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-    else:
-        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+    # if args.silent:
+    #     logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+    # else:
+    #     logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
     if args.new:
         from shutil import copy
@@ -412,4 +456,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        LOGGER.warn(e)

@@ -7,8 +7,10 @@ from gps.algorithm.policy.lin_gauss_policy import LinearGaussianPolicy
 from gps_agent_pkg.msg import ControllerParams, LinGaussParams, TfParams, CaffeParams, TfActionCommand
 from gps.sample.sample import Sample
 from gps.proto.gps_pb2 import LIN_GAUSS_CONTROLLER, CAFFE_CONTROLLER, TF_CONTROLLER
-import logging
-LOGGER = logging.getLogger(__name__)
+# import logging
+# LOGGER = logging.getLogger(__name__)
+from mbbl.util.common import logger as LOGGER
+
 try:
     from gps.algorithm.policy.caffe_policy import CaffePolicy
     NO_CAFFE = False

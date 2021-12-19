@@ -1,6 +1,6 @@
 """ This file defines a GMM prior for policy linearization. """
 import copy
-import logging
+# import logging
 
 import numpy as np
 
@@ -9,7 +9,8 @@ from gps.utility.gmm import GMM
 from gps.algorithm.algorithm_utils import gauss_fit_joint_prior
 
 
-LOGGER = logging.getLogger(__name__)
+# LOGGER = logging.getLogger(__name__)
+from mbbl.util.common import logger as LOGGER
 
 
 class PolicyPriorGMM(object):
@@ -46,6 +47,7 @@ class PolicyPriorGMM(object):
         self._max_samples = self._hyperparams['max_samples']
         self._max_clusters = self._hyperparams['max_clusters']
         self._strength = self._hyperparams['strength']
+        self._max_iterations = self._hyperparams['max_iterations']
 
     def update(self, samples, policy_opt, mode='add'):
         """
@@ -84,7 +86,7 @@ class PolicyPriorGMM(object):
         # import pdb; pdb.set_trace()
 
         LOGGER.debug('Generating %d clusters for policy prior GMM.', K)
-        self.gmm.update(XU, K)
+        self.gmm.update(XU, K, self._max_iterations)
 
     def eval(self, Ts, Ps):
         """ Evaluate prior. """

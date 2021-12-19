@@ -1,6 +1,6 @@
 """ This file defines the MD-based GPS algorithm. """
 import copy
-import logging
+# import logging
 
 import numpy as np
 import scipy as sp
@@ -10,7 +10,8 @@ from gps.algorithm.algorithm_utils import PolicyInfo
 from gps.algorithm.config import ALG_MDGPS
 from gps.sample.sample_list import SampleList
 
-LOGGER = logging.getLogger(__name__)
+# LOGGER = logging.getLogger(__name__)
+from mbbl.util.common import logger as LOGGER
 
 
 class AlgorithmMDGPS(Algorithm):
@@ -19,10 +20,10 @@ class AlgorithmMDGPS(Algorithm):
     (approximate) mirror descent guided policy search algorithm.
     """
 
-    def __init__(self, hyperparams):
+    def __init__(self, hyperparams,random_seed):
         config = copy.deepcopy(ALG_MDGPS)
         config.update(hyperparams)
-        Algorithm.__init__(self, config)
+        Algorithm.__init__(self, config,random_seed)
 
         policy_prior = self._hyperparams['policy_prior']
         for m in range(self.M):

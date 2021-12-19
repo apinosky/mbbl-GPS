@@ -1,11 +1,12 @@
 """ This file defines a Gaussian mixture model class. """
-import logging
+# import logging
 
 import numpy as np
 import scipy.linalg
 
 
-LOGGER = logging.getLogger(__name__)
+# LOGGER = logging.getLogger(__name__)
+from mbbl.util.common import logger as LOGGER
 
 
 def logsum(vec, axis=0, keepdims=True):

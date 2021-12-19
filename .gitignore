@@ -97,3 +97,5 @@ experiments/**/log.txt
 experiments/**/*.png
 .previous_experiment
 log.txt
+
+local/*

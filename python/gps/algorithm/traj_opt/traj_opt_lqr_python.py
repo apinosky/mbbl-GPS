@@ -1,5 +1,5 @@
 """ This file defines code for iLQG-based trajectory optimization. """
-import logging
+# import logging
 import copy
 
 import numpy as np
@@ -17,7 +17,8 @@ from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.algorithm_mdgps import AlgorithmMDGPS
 
 
-LOGGER = logging.getLogger(__name__)
+# LOGGER = logging.getLogger(__name__)
+from mbbl.util.common import logger as LOGGER
 
 
 class TrajOptLQRPython(TrajOpt):

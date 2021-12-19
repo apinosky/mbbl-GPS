@@ -29,10 +29,10 @@ class Gym_sample(Sample):
                 # init the sensor data
                 self._data[sensor_name] = \
                     np.empty((self.T,) + sensor_data.shape)
-                self._data[sensor_name].fill(np.nan)
+                self._data[sensor_name].fill(0.)
             self._data[sensor_name][t, :] = sensor_data
-            self._X[t, :].fill(np.nan)
-            self._obs[t, :].fill(np.nan)
+            self._X[t, :].fill(0.)
+            self._obs[t, :].fill(0.)
 
     def get(self, sensor_name, t=None):
         """ Get trajectory data for a particular sensor. """

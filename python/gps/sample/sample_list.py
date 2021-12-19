@@ -1,13 +1,17 @@
 """ This file defines the sample list wrapper and sample writers. """
-import cPickle
-import logging
+try:
+   import cPickle
+except:
+   import pickle as cPickle
+# import logging
 
 import numpy as np
 
 from gps.proto.gps_pb2 import NOISE
 
 
-LOGGER = logging.getLogger(__name__)
+# LOGGER = logging.getLogger(__name__)
+from mbbl.util.common import logger as LOGGER
 
 
 class SampleList(object):

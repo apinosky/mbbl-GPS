@@ -1,6 +1,6 @@
 """ This file defines the GMM prior for dynamics estimation. """
 import copy
-import logging
+# import logging
 
 import numpy as np
 
@@ -8,7 +8,8 @@ from gps.algorithm.dynamics.config import DYN_PRIOR_GMM
 from gps.utility.gmm import GMM
 
 
-LOGGER = logging.getLogger(__name__)
+# LOGGER = logging.getLogger(__name__)
+from mbbl.util.common import logger as LOGGER
 
 
 class DynamicsPriorGMM(object):
@@ -38,6 +39,7 @@ class DynamicsPriorGMM(object):
         self._max_samples = self._hyperparams['max_samples']
         self._max_clusters = self._hyperparams['max_clusters']
         self._strength = self._hyperparams['strength']
+        self._max_iterations = self._hyperparams['max_iterations']
 
     def initial_state(self):
         """ Return dynamics prior for initial time step. """
@@ -95,7 +97,7 @@ class DynamicsPriorGMM(object):
         LOGGER.debug('Generating %d clusters for dynamics GMM.', K)
 
         # Update GMM.
-        self.gmm.update(xux, K)
+        self.gmm.update(xux, K, self._max_iterations)
 
     def eval(self, Dx, Du, pts):
         """
