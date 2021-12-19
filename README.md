@@ -42,3 +42,9 @@ done
 ```
 
 The configuration can be changed by modifying the template config file `experiments/gym_mdgps_example`.
+
+## alp mode
+
+- Forked main mbbl branch as well -- for environments see [https://github.com/apinosky/mbbl.git](https://github.com/apinosky/mbbl.git)
+- Modified code to be compatible with Ubuntu 18.04, Python 3.6, and tensorflow v1.15+gpu
+    - Installed nvidia distribution of tensorflow with `pip install nvidia-pyindex` then `pip install nvidia-tensorflow[horovod]` to run Ubuntu 18.04 with tensorflow v1.15+gpu
